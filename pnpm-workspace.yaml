@@ -1,0 +1,9 @@
+allowBuilds:
+  '@prisma/client': set this to true or false
+  '@prisma/engines': set this to true or false
+  bcrypt: true
+  esbuild: true
+  msgpackr-extract: true
+  prisma: set this to true or false
+  sqlite3: true
+  workerd: true

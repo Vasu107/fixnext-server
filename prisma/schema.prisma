@@ -1,0 +1,109 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+model Notification {
+  id        Int      @id @default(autoincrement())
+  userId    String
+  type      String
+  title     String
+  message   String
+  time      String
+  button    String?
+  icon      String
+  isRead    Int      @default(0)
+  createdAt DateTime @default(now())
+}
+
+model User {
+  id           String            @id @default(uuid())
+  email        String            @unique
+  phone        String
+  passwordHash String
+  name         String
+  role         String            // CUSTOMER, PROVIDER, ADMIN
+  createdAt    DateTime          @default(now())
+  
+  // Relations
+  providerProfile ProviderProfile?
+  bookings        Booking[]        @relation("CustomerBookings")
+  providerJobs    Booking[]        @relation("ProviderJobs")
+  reviews         Review[]
+}
+
+model ProviderProfile {
+  id          String             @id @default(uuid())
+  user        User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId      String             @unique
+  bio         String?
+  experience  String?
+  city        String?
+  verified    Boolean            @default(false)
+  verifiedAt  DateTime?
+  
+  categories  ProviderCategory[]
+}
+
+model ProviderCategory {
+  id               String          @id @default(uuid())
+  providerProfile  ProviderProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  profileId        String
+  categoryId       String          // e.g. "cleaning"
+}
+
+model Booking {
+  id            String             @id @default(uuid())
+  bookingId     String             @unique // e.g. #FX-123456
+  customer      User               @relation("CustomerBookings", fields: [customerId], references: [id])
+  customerId    String
+  provider      User               @relation("ProviderJobs", fields: [providerId], references: [id])
+  providerId    String
+  
+  services      String             // JSON stringified array of services
+  dateTime      String
+  address       String
+  total         Float
+  
+  status        String             // Upcoming, Completed, Cancelled
+  jobStatus     String             // New, Accepted, En Route, Arrived, In Progress, Completed, Rejected
+  
+  otp           String?
+  otpVerified   Boolean            @default(false)
+  trackingActive Boolean           @default(false)
+  
+  paymentMethod String?
+  paymentStatus String             @default("Pending") // Pending, Paid
+  
+  placedAt      DateTime           @default(now())
+  
+  review        Review?
+  earning       ProviderEarning?
+}
+
+model Review {
+  id            String             @id @default(uuid())
+  booking       Booking            @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  bookingId     String             @unique
+  
+  customer      User               @relation(fields: [customerId], references: [id])
+  customerId    String
+  providerId    String             // Denormalized for easy fetching
+  
+  rating        Int
+  text          String
+  createdAt     DateTime           @default(now())
+}
+
+model ProviderEarning {
+  id            String             @id @default(uuid())
+  providerId    String
+  booking       Booking            @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  bookingId     String             @unique
+  amount        Float
+  paidAt        DateTime           @default(now())
+}
