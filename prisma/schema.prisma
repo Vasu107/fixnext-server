@@ -20,6 +20,12 @@ model Notification {
   createdAt DateTime @default(now())
 }
 
+model Category {
+  id    String @id @default(uuid())
+  name  String @unique
+  icon  String?
+}
+
 model User {
   id           String            @id @default(uuid())
   email        String            @unique

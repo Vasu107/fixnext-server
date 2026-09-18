@@ -140,6 +140,6 @@ app.post('/api/seed', async (req, res) => {
     }
 });
 
-app.listen(PORT, () => {
-    console.log(`FixNext Backend running on http://localhost:${PORT}`);
+app.listen(PORT, '0.0.0.0', () => {
+    console.log(`FixNext Backend running on http://0.0.0.0:${PORT}`);
 });

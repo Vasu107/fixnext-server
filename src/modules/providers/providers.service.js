@@ -73,7 +73,7 @@ const getProviderById = async (providerId) => {
 };
 
 const updateProfile = async (providerId, data) => {
-    const { bio, experience, city } = data;
+    const { bio, experience, city, categories } = data;
     
     const updated = await prisma.providerProfile.update({
         where: { userId: providerId },
@@ -83,6 +83,19 @@ const updateProfile = async (providerId, data) => {
             city
         }
     });
+    
+    if (categories && Array.isArray(categories)) {
+        await prisma.providerCategory.deleteMany({
+            where: { profileId: updated.id }
+        });
+        
+        await prisma.providerCategory.createMany({
+            data: categories.map(cat => ({
+                profileId: updated.id,
+                categoryId: cat
+            }))
+        });
+    }
     
     return updated;
 };

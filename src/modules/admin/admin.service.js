@@ -64,10 +64,44 @@ const getAllBookings = async () => {
     });
 };
 
+const getCategories = async () => {
+    return prisma.category.findMany();
+};
+
+const createCategory = async (name, icon) => {
+    return prisma.category.create({
+        data: { name, icon }
+    });
+};
+
+const deleteCategory = async (id) => {
+    return prisma.category.delete({
+        where: { id }
+    });
+};
+
+const getPayments = async () => {
+    return prisma.booking.findMany({
+        where: {
+            paymentStatus: { in: ['Paid', 'Pending'] }
+        },
+        include: {
+            customer: { select: { name: true } },
+            provider: { select: { name: true } },
+            earning: true
+        },
+        orderBy: { placedAt: 'desc' }
+    });
+};
+
 module.exports = {
     getStats,
     getPendingProviders,
     approveProvider,
     getAllUsers,
-    getAllBookings
+    getAllBookings,
+    getCategories,
+    createCategory,
+    deleteCategory,
+    getPayments
 };

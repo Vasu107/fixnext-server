@@ -52,4 +52,41 @@ router.get('/bookings', async (req, res) => {
     }
 });
 
+router.get('/categories', async (req, res) => {
+    try {
+        const categories = await adminService.getCategories();
+        res.json({ success: true, categories });
+    } catch (err) {
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
+router.post('/categories', async (req, res) => {
+    try {
+        const { name, icon } = req.body;
+        const category = await adminService.createCategory(name, icon);
+        res.status(201).json({ success: true, category });
+    } catch (err) {
+        res.status(400).json({ success: false, error: err.message });
+    }
+});
+
+router.delete('/categories/:id', async (req, res) => {
+    try {
+        await adminService.deleteCategory(req.params.id);
+        res.json({ success: true, message: 'Category deleted' });
+    } catch (err) {
+        res.status(400).json({ success: false, error: err.message });
+    }
+});
+
+router.get('/payments', async (req, res) => {
+    try {
+        const payments = await adminService.getPayments();
+        res.json({ success: true, payments });
+    } catch (err) {
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
 module.exports = router;
