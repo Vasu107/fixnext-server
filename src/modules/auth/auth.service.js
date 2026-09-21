@@ -1,8 +1,81 @@
 const bcrypt = require('bcrypt');
 const prisma = require('../../config/db');
 const { generateToken } = require('../../utils/jwt');
+const { OAuth2Client } = require('google-auth-library');
 
 const SALT_ROUNDS = 10;
+
+// ─── Google OAuth ────────────────────────────────────────────────────────────
+
+const googleAuth = async ({ idToken }) => {
+    const clientId = process.env.GOOGLE_CLIENT_ID;
+    if (!clientId) throw new Error('GOOGLE_CLIENT_ID is not configured on the server');
+
+    const client = new OAuth2Client(clientId);
+
+    let payload;
+    try {
+        const ticket = await client.verifyIdToken({
+            idToken,
+            audience: clientId,
+        });
+        payload = ticket.getPayload();
+    } catch (err) {
+        throw new Error('Invalid Google token');
+    }
+
+    const { sub: googleId, email, name, picture: avatar } = payload;
+
+    if (!email) throw new Error('Google account has no email');
+
+    // Try finding existing user by googleId first, then by email (linking existing account)
+    let user = await prisma.user.findFirst({
+        where: {
+            OR: [
+                { googleId },
+                { email, authProvider: 'local' }, // existing local account with same email
+            ],
+        },
+    });
+
+    if (user) {
+        // Update googleId if this was a local account being linked
+        if (!user.googleId) {
+            user = await prisma.user.update({
+                where: { id: user.id },
+                data: { googleId, authProvider: 'google', avatar },
+            });
+        }
+    } else {
+        // Create a new Google-authenticated customer
+        user = await prisma.user.create({
+            data: {
+                email,
+                name: name || email.split('@')[0],
+                googleId,
+                avatar,
+                authProvider: 'google',
+                role: 'customer',
+                // phone and passwordHash are optional — Google users don't have them
+            },
+        });
+    }
+
+    const token = generateToken({ userId: user.id, role: user.role, email: user.email });
+
+    return {
+        user: {
+            id: user.id,
+            name: user.name,
+            email: user.email,
+            role: user.role,
+            avatar: user.avatar,
+            phone: user.phone,
+            authProvider: user.authProvider,
+        },
+        token,
+    };
+};
 
 const registerCustomer = async (data) => {
     const { email, phone, password, name } = data;
@@ -80,11 +153,16 @@ const login = async (data) => {
     const user = await prisma.user.findUnique({ where: { email } });
     if (!user) throw new Error('Invalid credentials');
     
+    // Prevent password login for Google-only accounts
+    if (user.authProvider === 'google' || !user.passwordHash) {
+        throw new Error('This account uses Google Sign-In. Please use "Continue with Google".');
+    }
+    
     const isMatch = await bcrypt.compare(password, user.passwordHash);
     if (!isMatch) throw new Error('Invalid credentials');
     
     const token = generateToken({ userId: user.id, role: user.role, email: user.email });
-    return { user: { id: user.id, name: user.name, email: user.email, role: user.role }, token };
+    return { user: { id: user.id, name: user.name, email: user.email, role: user.role, phone: user.phone }, token };
 };
 
 const getMe = async (userId) => {
@@ -107,5 +185,6 @@ module.exports = {
     registerCustomer,
     registerProvider,
     login,
+    googleAuth,
     getMe
 };

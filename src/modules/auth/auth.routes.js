@@ -30,6 +30,20 @@ router.post('/login', async (req, res) => {
     }
 });
 
+// Google OAuth — client sends the idToken from expo-auth-session
+router.post('/google', async (req, res) => {
+    try {
+        const { idToken } = req.body;
+        if (!idToken) {
+            return res.status(400).json({ success: false, error: 'idToken is required' });
+        }
+        const result = await authService.googleAuth({ idToken });
+        res.json({ success: true, ...result });
+    } catch (err) {
+        res.status(400).json({ success: false, error: err.message });
+    }
+});
+
 router.get('/me', authenticate, async (req, res) => {
     try {
         const user = await authService.getMe(req.user.userId);

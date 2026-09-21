@@ -29,10 +29,13 @@ model Category {
 model User {
   id           String            @id @default(uuid())
   email        String            @unique
-  phone        String
-  passwordHash String
+  phone        String?           // Optional: Google OAuth users may not have phone
+  passwordHash String?           // Optional: Google OAuth users have no password
   name         String
-  role         String            // CUSTOMER, PROVIDER, ADMIN
+  role         String            // customer, provider, admin
+  authProvider String            @default("local") // "local" | "google"
+  googleId     String?           @unique // Google sub (user ID) for OAuth users
+  avatar       String?           // Profile picture URL from Google
   createdAt    DateTime          @default(now())
   
   // Relations
